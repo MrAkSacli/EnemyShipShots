@@ -1,0 +1,104 @@
+using UnityEngine;
+
+public class EnemyShip : MonoBehaviour
+{
+    public enum ShipType { Small, Medium, Large }
+    public ShipType shipType;
+
+    public Transform playerShip;  // Oyuncu gemisi konumunu belirlemek için
+    public float moveSpeed = 5f;  // Hareket hızı
+    public float fireRange = 20f; // Ateş menzili
+    public int firePower;         // Ateş gücü (hasar)
+    public int maxShots;          // Ateş sayısı
+    private int currentShots;      // Kalan atış hakkı
+    public GameObject cannonBallPrefab;  // Top mermisi prefabı
+
+    private bool isRamming = false;  // Ram saldırısına geçildiğini kontrol etmek için
+
+    void Start()
+    {
+        // Geminin türüne göre özellikleri ayarla
+        switch (shipType)
+        {
+            case ShipType.Small:
+                firePower = 1;
+                maxShots = 1;
+                break;
+            case ShipType.Medium:
+                firePower = 2;
+                maxShots = 2;
+                break;
+            case ShipType.Large:
+                firePower = 4;
+                maxShots = 4;
+                break;
+        }
+        currentShots = maxShots;
+    }
+
+    void Update()
+    {
+        if (!isRamming)
+        {
+            MoveTowardsPlayer();
+            if (Vector3.Distance(transform.position, playerShip.position) <= fireRange)
+            {
+                FireAtPlayer();
+            }
+        }
+        else
+        {
+            RamPlayer();
+        }
+    }
+
+    void MoveTowardsPlayer()
+    {
+        // Oyuncuya doğru hareket et
+        Vector3 direction = (playerShip.position - transform.position).normalized;
+        transform.position += direction * moveSpeed * Time.deltaTime;
+        transform.LookAt(playerShip);  // Gemiyi oyuncuya doğru çevir
+    }
+
+    void FireAtPlayer()
+    {
+        if (currentShots > 0)
+        {
+            Vector3 fireDirection;
+            if (playerShip.position.x > transform.position.x) // Sağda mı?
+            {
+                fireDirection = transform.right; // Sağdan ateşle
+            }
+            else
+            {
+                fireDirection = -transform.right; // Soldan ateşle
+            }
+
+            GameObject cannonBall = Instantiate(cannonBallPrefab, transform.position + fireDirection, Quaternion.identity);
+            Rigidbody rb = cannonBall.GetComponent<Rigidbody>();
+            rb.velocity = fireDirection * 20f; // Top mermisini ateşle
+
+            currentShots--;
+        }
+        else
+        {
+            // Ateş hakkı bitti, ram saldırısına geç
+            isRamming = true;
+        }
+    }
+
+    void RamPlayer()
+    {
+        // Oyuncuya doğru hızla hareket et
+        Vector3 direction = (playerShip.position - transform.position).normalized;
+        transform.position += direction * (moveSpeed * 2) * Time.deltaTime;  // Ram için hız iki katına çıkar
+
+        // Çarpışma durumunda hasar ver
+        if (Vector3.Distance(transform.position, playerShip.position) < 1.5f)
+        {
+            // Hasar verme işlemi burada yapılabilir, örneğin oyuncu gemisine belirli bir hasar verilebilir
+            Debug.Log("Ram Saldırısı: Oyuncu hasar aldı.");
+            Destroy(gameObject); // Ram saldırısı sonrası düşman gemisini yok et
+        }
+    }
+}
